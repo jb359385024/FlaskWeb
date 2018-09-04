@@ -1,0 +1,75 @@
+# -*- coding=utf-8 -*-
+import psycopg2
+import xlrd
+
+
+def getDatabaseData():
+    '''
+    连接数据库，通过sql语句查询出login_name,phone,email数据并返回
+    return:每行数据以字典方式保存在列表中，所有数据以列表形式返回
+    '''
+    try:
+        conn = psycopg2.connect(database='db_3as', user='administrator', password=r'!@#$%^&*', host='192.168.0.252',
+                                port='5432')
+        cur = conn.cursor()
+        cur.execute('select login_name,phone,email from user2')
+        rows = cur.fetchall()
+        list = []
+        for row in rows:
+            app = {}
+            app['login_name'] = row[0].strip()
+            app['phone'] = row[1].strip()
+            app['email'] = row[2].strip()
+            list.append(app)
+    except Exception, e:
+        print e
+    finally:
+        conn.close()
+    return list
+
+
+def excelTableDataByName(file=u'C:\\Users\\jiangbin\\Desktop\\新建文件夹\\test.xlsx', rownameindex=0, by_name=u'Sheet1'):
+    '''
+    :param file: 文件路径
+    :param rownameindex: 表头索引
+    :param by_name: sheet名称
+    :return:返回包含所有数据的列表
+    '''
+    try:
+        data = xlrd.open_workbook(file)
+    except Exception as e:
+        print(str(e))
+    table = data.sheet_by_name(by_name)  # 获得表格
+    nrows = table.nrows  # 拿到总共行数
+    colnames = table.row_values(rownameindex)  # 某一行数据 ['姓名', '用户名', '联系方式', '密码']
+    list = []
+    for rownum in range(1, nrows):  # 也就是从Excel第二行开始，第一行表头不算
+        row = table.row_values(rownum)
+        if row:
+            app = {}
+            for i in range(len(colnames)):
+                app[colnames[i]] = row[i]  # 表头与数据对应
+            list.append(app)
+    return list
+
+
+if __name__ == '__main__':
+    database = getDatabaseData()
+    file = excelTableDataByName()
+    print('The total number of rows in the database table user2 is:%s' % len(database))
+    print('The total number of rows in the file test is:%s' % len(file))
+    print('****************************************************************************')
+    print('There are different Numbers:')
+    for row_num in range(min(len(file), len(database))):
+        if database[row_num]['login_name'] != file[row_num][u'名称'] or \
+                        database[row_num]['phone'] != file[row_num][u'电话号码'] or \
+                        database[row_num]['email'] != file[row_num][u'邮箱地址']:
+            print ' %s line have different values,database is %s.file is %s' % (row_num + 1,
+                                                                                database[row_num], file[row_num])
+    print('****************************************************************************')
+    print('The redundant data:')
+    for row_remaining in range(min(len(file), len(database)), max(len(file), len(database))):
+        if len(file) > len(database):
+            print 'The redundant file data is %s line:%s' % (row_remaining + 1, file[row_remaining])
+        else:
+            print 'The redundant database data is %s line:%s' % (row_remaining + 1, database[row_remaining])
